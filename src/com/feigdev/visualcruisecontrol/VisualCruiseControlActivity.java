@@ -156,7 +156,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 	}
 
 	@Override
-	public void onUpdate() {
+	public void onLocUpdate() {
 		gpsLocations = locGPS.getLocations();
 		float avgGpsSpeed = 0;
 		float gpsSpeed = 0;
