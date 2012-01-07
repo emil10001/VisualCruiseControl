@@ -1,1 +1,1 @@
-This is a very simple visual cruise control app. The idea is that you set your desired speed, and the screen will change color depending on if you are above or below the desired speed. You can hit the 'pause' button at stop signs and it will stop recording gps data until you hit un-pause.
+This is a very simple visual cruise control app. The idea is that you set your desired speed, and the screen will change color depending on if you are above or below the desired speed. You can hit the 'Stop' button at stop signs and it will stop recording gps data until you hit 'Start'.
