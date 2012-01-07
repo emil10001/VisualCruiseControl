@@ -1,3 +1,5 @@
+Requires SimpleLocations library.
+
 This is a very simple visual cruise control app.
 The idea is that you set your desired speed, and
 the screen will change color depending on if you
