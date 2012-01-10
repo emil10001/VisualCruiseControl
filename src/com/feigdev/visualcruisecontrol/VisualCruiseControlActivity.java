@@ -79,7 +79,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 	            public void onChronometerTick(Chronometer chronometer) {
 	                long elapsedMillis = SystemClock.elapsedRealtime() - chronometer.getBase();
 	                if(pause){
-	                	mChronometer.setText(String.format("%.1g s", (elapsedMillis/1000.0)));
+	                	mChronometer.setText(String.format("%.1f s", (elapsedMillis/1000.0)));
 	                }
 	                else {
 	                	mChronometer.stop();
@@ -197,9 +197,9 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 			bear = "NW";
 		}
 		
-		gpsCurSpeed.setText(String.format("%.1g mph", gpsSpeed));
-		curSpeed.setText(String.format("%.1g mph", gpsSpeed));
-		gpsAvgSpeed.setText(String.format("%.1g mph", avgGpsSpeed));
+		gpsCurSpeed.setText(String.format("%.1f mph", gpsSpeed));
+		curSpeed.setText(String.format("%.1f mph", gpsSpeed));
+		gpsAvgSpeed.setText(String.format("%.1f mph", avgGpsSpeed));
 		bearing.setText(bear);
 		if (avgGpsSpeed < setSpeed){
 			background.setBackgroundColor(Color.GREEN);
