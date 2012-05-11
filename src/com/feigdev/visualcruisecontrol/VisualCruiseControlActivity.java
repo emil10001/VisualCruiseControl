@@ -14,8 +14,11 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.text.Editable;
+import android.text.InputFilter;
+import android.text.method.DigitsKeyListener;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.WindowManager;
@@ -60,6 +63,8 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
         init();
     }
     
+    private Handler handler = new Handler();
+    
     @Override 
     public void onResume(){
     	super.onResume();
@@ -69,7 +74,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
     private void init(){
     		setSpeed = (float)0.0;
 	        pause = true;
-	        setTarget();
+	        setTarget("");
 	    	locMan = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 	    	locGPS = new LocationController(this);
 	    	timerStart();
@@ -119,20 +124,38 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 		}
 	}
 	
-	private void setTarget(){
+	private void setTarget(String msg){
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 
 		alert.setTitle("Set target speed in mph");
-
+		alert.setMessage(msg);
 		final EditText input = new EditText(this);
+		
+		input.setFilters(new InputFilter[] {
+		    DigitsKeyListener.getInstance(false,true), 
+		});
+
+		// Digits only & use numeric soft-keyboard.
+		input.setKeyListener(DigitsKeyListener.getInstance(false,true));
+		
 		input.setText("0.0");
 		alert.setView(input);
 
 		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 		public void onClick(DialogInterface dialog, int whichButton) {
 			  Editable value = input.getText();
-			  setSpeed = new Float(value.toString());
-			  targetSpeed.setText(((Float)setSpeed).toString() + " mph");
+			  try {
+				  setSpeed = Float.parseFloat(value.toString());
+				  targetSpeed.setText(((Float)setSpeed).toString() + " mph");
+			  }
+			  catch (NumberFormatException ex){
+				  handler.post(new Runnable(){
+					  @Override
+					  public void run() {
+						  setTarget("Please enter a numeric value.");
+					  }
+				  });
+			  }
 			}
 		});
 
@@ -163,10 +186,13 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 		String bear = "";
 		float floatBear = 0;
 		
-		for (int i = 0 ; i < gpsLocations.size(); i++){
+		int gpsLocsSize = gpsLocations.size();
+		for (int i = 0 ; i < gpsLocsSize; i++){
 			avgGpsSpeed += gpsLocations.get(i).getSpeed();
-			gpsSpeed = gpsLocations.get(i).getSpeed();
 		}
+		
+		gpsSpeed = gpsLocations.get(gpsLocsSize - 1).getSpeed();
+		
 		avgGpsSpeed = (float) ((avgGpsSpeed / gpsLocations.size()) * 2.23693629);
 				
 		gpsSpeed = (float)(gpsSpeed * 2.23693629);
