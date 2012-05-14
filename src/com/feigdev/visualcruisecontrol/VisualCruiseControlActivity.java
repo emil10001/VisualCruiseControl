@@ -1,5 +1,6 @@
 package com.feigdev.visualcruisecontrol;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 import com.feigdev.simplelocations.LocationController;
@@ -33,7 +34,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 	private ArrayList<Location> gpsLocations;
 	private LocationManager locMan;
 	private LocationController locGPS;
-	private float setSpeed;
+	private double setSpeed;
 	private TextView curSpeed;
 	private TextView targetSpeed;
 	private TextView gpsCurSpeed;
@@ -43,6 +44,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 	private LinearLayout background;
 	private boolean pause;
 	private Chronometer mChronometer;
+	private static final double CONVERSION_FACTOR = 2.23693629;
 	
     /** Called when the activity is first created. */
     @Override
@@ -72,7 +74,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
     }
     
     private void init(){
-    		setSpeed = (float)0.0;
+    		setSpeed = (double)0.0;
 	        pause = true;
 	        setTarget("");
 	    	locMan = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
@@ -114,6 +116,12 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
     	
     }
     
+    @Override
+    public void onDestroy(){
+    	locMan.removeUpdates(locGPS);
+		super.onDestroy();
+    }
+    
     /***
      * This method is good for changing the gps check time based on the statusCheckTime variable
      */
@@ -145,8 +153,8 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 		public void onClick(DialogInterface dialog, int whichButton) {
 			  Editable value = input.getText();
 			  try {
-				  setSpeed = Float.parseFloat(value.toString());
-				  targetSpeed.setText(((Float)setSpeed).toString() + " mph");
+				  setSpeed = Double.parseDouble(value.toString());
+				  targetSpeed.setText(((Double)setSpeed).toString() + " mph");
 			  }
 			  catch (NumberFormatException ex){
 				  handler.post(new Runnable(){
@@ -178,54 +186,93 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
     	mChronometer.setText("0.0");
 	}
 
+	/***
+	 * Using this to ensure that I am not overflowing any values. 
+	 * Checked the maximum result by multiplying two of the maximum double 
+	 * shifted longs together and it is much less than the size of a long. 
+	 * This will not work in the general case, however it is sufficient for my needs.
+	 * 
+	 * @param value
+	 * @return
+	 */
+	private long doubleToShiftedLong(double value){
+		value = value * 10000.0;
+		return Long.valueOf(new DecimalFormat("##########").format(value));
+	}
+	
+	private double shiftBack(long value){
+		return (double)(value / 10000.0);
+	}
+	
+	private double doubleShiftBack(long value){
+		return (double)((value / 10000.0) / 10000.0);
+	}
+	
 	@Override
 	public void onLocUpdate() {
+		if (null == locGPS.getLocations()){
+			return;
+		}
+		if (0 == locGPS.getLocations().size()){
+			return;
+		}
 		gpsLocations = locGPS.getLocations();
-		float avgGpsSpeed = 0;
-		float gpsSpeed = 0;
+		
+		double avgGpsSpeed = 0;
+		double gpsSpeed = 0;
 		String bear = "";
-		float floatBear = 0;
+		double doubleBear = 0;
+		int validSpeedCounter = 0;
 		
 		int gpsLocsSize = gpsLocations.size();
+		Location lastGpsLoc = gpsLocations.get(gpsLocsSize - 1);
+		
 		for (int i = 0 ; i < gpsLocsSize; i++){
-			avgGpsSpeed += gpsLocations.get(i).getSpeed();
+			if (null != gpsLocations.get(i)){
+				if (gpsLocations.get(i).hasSpeed()){
+					validSpeedCounter++;
+					avgGpsSpeed += gpsLocations.get(i).getSpeed();
+				}
+			}
 		}
 		
-		gpsSpeed = gpsLocations.get(gpsLocsSize - 1).getSpeed();
+		avgGpsSpeed = doubleShiftBack((doubleToShiftedLong(avgGpsSpeed) / (long)(validSpeedCounter)) * doubleToShiftedLong(CONVERSION_FACTOR));
 		
-		avgGpsSpeed = (float) ((avgGpsSpeed / gpsLocations.size()) * 2.23693629);
-				
-		gpsSpeed = (float)(gpsSpeed * 2.23693629);
-		
-		floatBear = gpsLocations.get(gpsLocations.size() - 1).getBearing() % 360;
-		if (floatBear > 337.5 && floatBear <= 22.5 ){
-			bear = "N";
-		}
-		else if (floatBear > 22.5 && floatBear <= 67.5 ){
-			bear = "NE";
-		}
-		else if (floatBear > 67.5 && floatBear <= 112.5 ){
-			bear = "E";
-		}
-		else if (floatBear > 112.5 && floatBear <= 157.5 ){
-			bear = "SE";
-		}
-		else if (floatBear > 157.5 && floatBear <= 202.5 ){
-			bear = "S";
-		}
-		else if (floatBear > 202.5 && floatBear <= 247.5 ){
-			bear = "SW";
-		}
-		else if (floatBear > 247.5 && floatBear <= 292.5 ){
-			bear = "W";
-		}
-		else if (floatBear > 292.5 && floatBear <= 337.5 ){
-			bear = "NW";
+		if (lastGpsLoc.hasSpeed()){
+			gpsSpeed = doubleShiftBack(doubleToShiftedLong(lastGpsLoc.getSpeed()) * doubleToShiftedLong(CONVERSION_FACTOR));
 		}
 		
-		gpsCurSpeed.setText(String.format("%.1f mph", gpsSpeed));
-		curSpeed.setText(String.format("%.1f mph", gpsSpeed));
-		gpsAvgSpeed.setText(String.format("%.1f mph", avgGpsSpeed));
+		if (lastGpsLoc.hasBearing()){
+			doubleBear = lastGpsLoc.getBearing() % 360;
+			if (doubleBear > 337.5 && doubleBear <= 22.5 ){
+				bear = "N";
+			}
+			else if (doubleBear > 22.5 && doubleBear <= 67.5 ){
+				bear = "NE";
+			}
+			else if (doubleBear > 67.5 && doubleBear <= 112.5 ){
+				bear = "E";
+			}
+			else if (doubleBear > 112.5 && doubleBear <= 157.5 ){
+				bear = "SE";
+			}
+			else if (doubleBear > 157.5 && doubleBear <= 202.5 ){
+				bear = "S";
+			}
+			else if (doubleBear > 202.5 && doubleBear <= 247.5 ){
+				bear = "SW";
+			}
+			else if (doubleBear > 247.5 && doubleBear <= 292.5 ){
+				bear = "W";
+			}
+			else if (doubleBear > 292.5 && doubleBear <= 337.5 ){
+				bear = "NW";
+			}
+		}
+		
+		gpsCurSpeed.setText(new DecimalFormat("###.#").format(gpsSpeed) + " mph");
+		curSpeed.setText(new DecimalFormat("###.#").format(gpsSpeed) + " mph");
+		gpsAvgSpeed.setText(new DecimalFormat("###.#").format(avgGpsSpeed) + " mph");
 		bearing.setText(bear);
 		if (avgGpsSpeed < setSpeed){
 			background.setBackgroundColor(Color.GREEN);
