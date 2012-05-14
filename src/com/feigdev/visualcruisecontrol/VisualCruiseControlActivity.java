@@ -244,7 +244,7 @@ public class VisualCruiseControlActivity extends Activity implements LocationUpd
 		
 		if (lastGpsLoc.hasBearing()){
 			doubleBear = lastGpsLoc.getBearing() % 360;
-			if (doubleBear > 337.5 && doubleBear <= 22.5 ){
+			if ((doubleBear > 0.0 && doubleBear <= 22.5) || (doubleBear > 337.5 && doubleBear <= 360.0 )){
 				bear = "N";
 			}
 			else if (doubleBear > 22.5 && doubleBear <= 67.5 ){
